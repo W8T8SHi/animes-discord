@@ -1,26 +1,34 @@
 name: Notifications animes
-
 on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
-
+    inputs:
+      test:
+        description: "Envoyer un message de test sur Discord"
+        type: boolean
+        default: false
 permissions:
   contents: write
-
 concurrency:
   group: anime
   cancel-in-progress: false
-
 jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Message de test
+        if: ${{ inputs.test }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_MENTION: ${{ vars.DISCORD_MENTION }}
+        run: python anime_discord.py --test
       - name: Vérifier les sorties
+        if: ${{ !inputs.test }}
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           DISCORD_MENTION: ${{ vars.DISCORD_MENTION }}
@@ -28,6 +36,7 @@ jobs:
           GRACE_MIN: "45"
         run: python anime_discord.py --once
       - name: Enregistrer les messages déjà envoyés
+        if: ${{ !inputs.test }}
         run: |
           git config user.name "anime-bot"
           git config user.email "anime-bot@users.noreply.github.com"
